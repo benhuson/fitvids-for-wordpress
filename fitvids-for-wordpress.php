@@ -131,7 +131,7 @@ class fitvids_wp {
     	}
     	
     	// add fitvids
-    	wp_register_script( 'fitvids', plugins_url('/jquery.fitvids.js', __FILE__), array('jquery'), '1.0', true);    	
+    	wp_register_script( 'fitvids', plugins_url('/jquery.fitvids.js', __FILE__), array('jquery'), '1.1', true);    	
     	wp_enqueue_script( 'fitvids');
     	add_action('wp_print_footer_scripts', array($this, 'add_fitthem'));
     } // end fitvids_scripts
