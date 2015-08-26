@@ -44,8 +44,101 @@ if ( !function_exists( 'add_action') ) {
 class fitvids_wp {
 	// when object is created
 	function __construct() {
+		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action('admin_menu', array($this, 'menu')); // add item to menu
 		add_action('wp_enqueue_scripts', array($this, 'fitvids_scripts')); // add fit vids to site
+		add_filter( 'option_page_capability_fitvids-wp', array( $this, 'save_settings_capability' ) );
+	}
+
+	/**
+	 * Save Settings Capability
+	 *
+	 * The Fitvids settings page requires the 'switch_themes' capability.
+	 * As we use the WordPress Settings API which posts data to options.php we
+	 * need to let the options page allow this capability when saving the settings.
+	 *
+	 * @return  string  Capability.
+	 */
+	public function save_settings_capability() {
+
+		return 'switch_themes';
+
+	}
+
+	/**
+	 * Register Settings
+	 */
+	public function register_settings() {
+
+		// Add Settings Section
+		add_settings_section(
+			'fitvids_wp_settings',
+			'',
+			create_function( '', 'return "";' ),
+			'fitvids-wp'
+		);
+
+		// Add Selector Field
+		add_settings_field(
+			'fitvids_wp_selector',
+			__( 'jQuery Selector', 'fitvids-for-wordpress' ),
+			array( $this, 'fitvids_wp_selector_field' ),
+			'fitvids-wp',
+			'fitvids_wp_settings'
+		);
+
+		// Add Custom Selector Field
+		add_settings_field(
+			'fitvids_wp_custom_selector',
+			__( 'FitVids Custom Selector', 'fitvids-for-wordpress' ),
+			array( $this, 'fitvids_wp_custom_selector_field' ),
+			'fitvids-wp',
+			'fitvids_wp_settings'
+		);
+
+		// Add jQuery Field
+		add_settings_field(
+			'fitvids_wp_jq',
+			__( 'jQuery', 'fitvids-for-wordpress' ),
+			array( $this, 'fitvids_wp_jq_field' ),
+			'fitvids-wp',
+			'fitvids_wp_settings'
+		);
+
+		register_setting( 'fitvids-wp', 'fitvids_wp_selector', 'sanitize_text_field' );
+		register_setting( 'fitvids-wp', 'fitvids_wp_custom_selector', 'sanitize_text_field' );
+		register_setting( 'fitvids-wp', 'fitvids_wp_jq', 'sanitize_text_field' );
+
+	}
+
+	/**
+	 * Selector Field
+	 */
+	public function fitvids_wp_selector_field() {
+
+		printf( '<p>%s <a href="http://www.w3schools.com/jquery/jquery_selectors.asp" target="_blank">%s</a></p>', esc_html__( 'Add a CSS selector for FitVids to work.', 'fitvids-for-wordpress' ), esc_html__( 'Need help?', 'fitvids-for-wordpress' ) );
+		printf( '<p class="code">jQuery(&quot;<input type="text" id="fitvids_wp_selector" name="fitvids_wp_selector" value="%s">&quot;).fitVids();</p>', esc_attr( get_option( 'fitvids_wp_selector' ) ) );
+
+	}
+
+	/**
+	 * Custom Selector Field
+	 */
+	public function fitvids_wp_custom_selector_field() {
+
+		printf( '<p>%s <a href="https://github.com/davatron5000/FitVids.js#add-your-own-video-vendor" target="_blank">%s</a></p>', esc_html__( 'Add a custom selector for FitVids if you are using videos that are not supported by default.', 'fitvids-for-wordpress' ), esc_html__( 'Need help?', 'fitvids-for-wordpress' ) );
+		printf( '<p class="code">jQuery().fitVids({ customSelector: &quot;<input id="fitvids_wp_custom_selector" value="%s" name="fitvids_wp_custom_selector" type="text">&quot;});</p>', esc_attr( get_option('fitvids_wp_custom_selector') ) );
+
+	}
+
+	/**
+	 * jQuery Field
+	 */
+	public function fitvids_wp_jq_field() {
+
+		printf( '<p><input id="fitvids_wp_jq" value="true" name="fitvids_wp_jq" type="checkbox"%s /> %s</p>', checked( 'true', get_option( 'fitvids_wp_jq' ), false ), esc_html__( 'Add jQuery 1.7.2 from Google CDN', 'fitvids-for-wordpress' ) );
+		printf( '<p class="description">%s<br />%s</p>', esc_html__( 'If you are already running jQuery 1.7+ you will not need to check the box.', 'fitvids-for-wordpress' ), esc_html__( 'Note that some plugins require different versions of jQuery and may have conflicts with FitVids.', 'fitvids-for-wordpress' ) );
+
 	}
 
 	// make menu
@@ -65,59 +158,21 @@ class fitvids_wp {
 	    // $_POST needs to be sanitized by version 1.0
 	   	if( isset($_POST['submit']) && check_admin_referer('fitvids_action','fitvids_ref') ) {
 			  $fitvids_wp_message = '';
-
-	   		update_option('fitvids_wp_jq', addslashes($_POST['fitvids_wp_jq']));
-	   		update_option('fitvids_wp_selector', esc_js(trim($_POST['fitvids_wp_selector'])));
-			  update_option('fitvids_wp_custom_selector',  esc_js(trim($_POST['fitvids_wp_custom_selector'])));
-	   		
 	   		if($_POST['fitvids_wp_jq'] != '') { $fitvids_wp_message .= 'You have enabled jQuery for your theme.'; }
 	   		echo '<div id="message" class="updated below-h2"><p>FitVids is updated. ', $fitvids_wp_message ,'</p></div>';
 	   	}
 	    ?>
-	    
-	    <form method="post" action="<?php echo esc_attr($_SERVER["REQUEST_URI"]); ?>">
-		  <?php
-		  wp_nonce_field('fitvids_action','fitvids_ref');
-		  $checked = '';
-	    if(get_option('fitvids_wp_jq') == 'true') { $checked = 'checked="checked"'; }
-	    ?>
 
-      <table class="form-table">
-	    <tbody>
-	    <tr>
-		  <td>
+		<form method="post" action="options.php">
+			<?php
 
-		    <h3 style="font-weight: bold;">jQuery</h3>
-				<p>If you are already running jQuery 1.7+ you will not need to check the box. Note that some plugins require different versions of jQuery and may have conflicts with FitVids.</p>
-			  <label><input 	id="fitvids_wp_jq"
-			          value="true"
-			          name="fitvids_wp_jq"
-			          type="checkbox"
-			          <?php if(isset($checked)) echo $checked; ?>
-			      > Add jQuery 1.7.2 from Google CDN</label>
+			settings_fields( 'fitvids-wp' );
+			do_settings_sections( 'fitvids-wp' );
 
-		  </td>
-	    </tr>
-	    <tr>
-		  <td>
+			?>
+			<p class="submit"><input type="submit" id="fitvids_wp_submit" class="button button-primary" value="<?php _e( 'Save Changes' ); ?>"></p>
+		</form>
 
-			<h3 style="font-weight: bold;"><label for="fitvids_wp_selector">Enter jQuery Selector</label></h3>
-			<p>Add a CSS selector for FitVids to work. <a href="http://www.w3schools.com/jquery/jquery_selectors.asp" target="_blank"> Need help?</a></p>
-			<p><em>jQuery(" <input id="fitvids_wp_selector" value="<?php echo get_option('fitvids_wp_selector'); ?>" name="fitvids_wp_selector" type="text"> ").fitVids();</em></p>
-
-			<h3 style="font-weight: bold;"><label for="fitvids_wp_custom_selector">Enter FitVids Custom Selector</label></h3>
-			<p>Add a custom selector for FitVids if you are using videos that are not supported by default. <a href="https://github.com/davatron5000/FitVids.js#add-your-own-video-vendor" target="_blank"> Need help?</a></p>
-			<p><em>jQuery().fitVids({ customSelector: " <input id="fitvids_wp_custom_selector" value="<?php echo stripslashes(get_option('fitvids_wp_custom_selector')); ?>" name="fitvids_wp_custom_selector" type="text"> "});</em></p>
-
-
-			<p class="submit"><input type="submit" name="submit" class="button-primary" value="Save Changes" /></p>
-
-		  </td>
-	    </tr>
-	    </tbody>
-      </table>
-	    </form>
-	    
 	    </div>
 	    
 	    <?php }
